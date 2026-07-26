@@ -119,6 +119,11 @@
     border-bottom: 2px solid var(--divider);
   }
 
+  .serve-state-bar.win{
+    background: #1a2e1a;
+    color: var(--goal);
+  }
+
   /* ---------- CONTROL BUTTONS ---------- */
   .controls{
     flex: 1 1 0;
@@ -152,6 +157,12 @@
     background: var(--panel);
     line-height:1.1;
   }
+
+  .action-btn[disabled]{
+    opacity: 0.35;
+    cursor: default;
+  }
+  .action-btn[disabled]:active{ filter:none; }
 
   .btn-player{
     font-size: clamp(16px, 3.6vh, 30px);
@@ -274,18 +285,28 @@
 
   <div id="announcer" class="sr-only" aria-live="polite" role="status"></div>
 
+  <audio id="winSound" src="win.mp3" preload="auto"></audio>
+
 <script>
   let score1 = 0;
   let score2 = 0;
   // serve state: 0 = P1 1st, 1 = P1 2nd, 2 = P2 1st, 3 = P2 2nd
   let serveState = 0;
   let history = []; // { player, amount, prevServe }
+  let winner = null; // null, 1, or 2
 
   const score1El = document.getElementById('score1');
   const score2El = document.getElementById('score2');
   const serveStateEl = document.getElementById('serveState');
   const undoBtn = document.getElementById('undoBtn');
   const announcer = document.getElementById('announcer');
+  const winSound = document.getElementById('winSound');
+  const actionButtons = [
+    document.getElementById('p1goal'),
+    document.getElementById('p2goal'),
+    document.getElementById('p1foul'),
+    document.getElementById('p2foul')
+  ];
 
   const dots = {
     1: [document.getElementById('dot1a'), document.getElementById('dot1b')],
@@ -333,7 +354,44 @@
     undoBtn.disabled = history.length === 0;
   }
 
+  function checkWin(){
+    if(score1 >= 11 && score1 - score2 >= 2) return 1;
+    if(score2 >= 11 && score2 - score1 >= 2) return 2;
+    return null;
+  }
+
+  function setActionButtonsDisabled(disabled){
+    actionButtons.forEach(btn => { btn.disabled = disabled; });
+  }
+
+  function showWinner(player){
+    winner = player;
+    serveStateEl.textContent = 'Player ' + player + ' Wins!';
+    serveStateEl.classList.add('win');
+    setActionButtonsDisabled(true);
+    winSound.currentTime = 0;
+    winSound.play().catch(() => {});
+  }
+
+  function clearWinner(){
+    winner = null;
+    serveStateEl.classList.remove('win');
+    setActionButtonsDisabled(false);
+    renderServe();
+  }
+
+  function applyWinCheck(){
+    const won = checkWin();
+    if(won){
+      showWinner(won);
+    } else if(winner !== null){
+      clearWinner();
+    }
+  }
+
   function addPoints(player, amount){
+    if(winner !== null) return;
+
     const prevServe = serveState;
     if(player === 1){ score1 += amount; } else { score2 += amount; }
     history.push({ player, amount, prevServe });
@@ -343,12 +401,13 @@
     renderServe();
     announceScores();
     updateUndoState();
+    applyWinCheck();
   }
 
   document.getElementById('p1goal').addEventListener('click', () => addPoints(1, 2));
   document.getElementById('p2goal').addEventListener('click', () => addPoints(2, 2));
-  document.getElementById('p1foul').addEventListener('click', () => addPoints(1, 1));
-  document.getElementById('p2foul').addEventListener('click', () => addPoints(2, 1));
+  document.getElementById('p1foul').addEventListener('click', () => addPoints(2, 1));
+  document.getElementById('p2foul').addEventListener('click', () => addPoints(1, 1));
 
   undoBtn.addEventListener('click', () => {
     if(history.length === 0) return;
@@ -360,6 +419,7 @@
     renderServe();
     announceScores();
     updateUndoState();
+    applyWinCheck();
   });
 
   document.getElementById('resetBtn').addEventListener('click', () => {
@@ -367,6 +427,9 @@
     score2 = 0;
     serveState = 0;
     history = [];
+    winner = null;
+    serveStateEl.classList.remove('win');
+    setActionButtonsDisabled(false);
     renderScores();
     renderServe();
     updateUndoState();
