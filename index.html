@@ -12,8 +12,8 @@
     --text: #FFFFFF;
     --p1: #39E0FF;
     --p2: #FF4D6D;
-    --plus: #2FE875;
-    --minus: #FF5A4E;
+    --goal: #2FE875;
+    --foul: #FFA733;
     --amber: #FFC94A;
   }
 
@@ -38,7 +38,7 @@
 
   /* ---------- SCORE DISPLAY ---------- */
   .scoreboard{
-    flex: 1 1 42%;
+    flex: 1 1 0;
     display:flex;
     position:relative;
     min-height: 0;
@@ -71,7 +71,7 @@
   .score-num{
     font-family: 'Courier New', Consolas, monospace;
     font-weight: 900;
-    font-size: clamp(64px, 22vh, 220px);
+    font-size: clamp(56px, 18vh, 200px);
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
@@ -101,9 +101,27 @@
     transform: translateX(-1px);
   }
 
+  /* ---------- SERVE STATE BOX ---------- */
+  .serve-state-bar{
+    flex: 0 0 auto;
+    min-height: 56px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: #1b1c1f;
+    color: var(--amber);
+    font-weight: 700;
+    font-size: clamp(16px, 3.6vh, 28px);
+    letter-spacing: 0.04em;
+    text-align:center;
+    padding: 6px 10px;
+    border-top: 2px solid var(--divider);
+    border-bottom: 2px solid var(--divider);
+  }
+
   /* ---------- CONTROL BUTTONS ---------- */
   .controls{
-    flex: 1 1 46%;
+    flex: 1 1 0;
     display:grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
@@ -119,8 +137,10 @@
     cursor:pointer;
     color: var(--text);
     display:flex;
+    flex-direction: column;
     align-items:center;
     justify-content:center;
+    gap: 4px;
     -webkit-user-select:none;
     user-select:none;
   }
@@ -128,18 +148,30 @@
   button:active{ filter: brightness(0.8); }
   button:focus-visible{ outline: 4px solid var(--amber); outline-offset: -4px; }
 
-  .score-btn{
+  .action-btn{
     background: var(--panel);
-    font-size: clamp(48px, 12vh, 110px);
-    font-weight: 800;
-    line-height:1;
+    line-height:1.1;
   }
-  .score-btn.plus{ color: var(--plus); }
-  .score-btn.minus{ color: var(--minus); }
+
+  .btn-player{
+    font-size: clamp(16px, 3.6vh, 30px);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .action-btn.p1 .btn-player{ color: var(--p1); }
+  .action-btn.p2 .btn-player{ color: var(--p2); }
+
+  .btn-action{
+    font-size: clamp(28px, 8vh, 64px);
+    font-weight: 900;
+  }
+  .action-btn.goal .btn-action{ color: var(--goal); }
+  .action-btn.foul .btn-action{ color: var(--foul); }
 
   /* ---------- BOTTOM BAR ---------- */
   .bottom-bar{
-    flex: 1 1 12%;
+    flex: 0 0 auto;
     display:grid;
     grid-template-columns: 1fr 1fr;
     gap: 3px;
@@ -147,15 +179,19 @@
     min-height: 68px;
   }
 
-  .serve-btn{
+  .undo-btn{
     background: #1b1c1f;
     color: var(--amber);
-    font-size: clamp(15px, 3.4vh, 26px);
-    font-weight: 700;
-    text-align:center;
-    padding: 4px 6px;
-    letter-spacing: 0.02em;
+    font-size: clamp(16px, 3.6vh, 28px);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
+  .undo-btn[disabled]{
+    color: #6b6552;
+    cursor: default;
+  }
+  .undo-btn[disabled]:active{ filter:none; }
 
   .reset-btn{
     background: #3a1414;
@@ -171,9 +207,8 @@
   }
 
   @media (orientation: landscape) and (max-height: 500px){
-    .scoreboard{ flex-basis: 40%; }
-    .controls{ flex-basis: 44%; }
-    .bottom-bar{ flex-basis: 16%; }
+    .serve-state-bar{ min-height: 40px; }
+    .bottom-bar{ min-height: 52px; }
   }
 
   .sr-only{
@@ -211,15 +246,29 @@
     </div>
   </div>
 
+  <div class="serve-state-bar" id="serveState" role="status" aria-live="polite">Player 1 &middot; 1st Serve</div>
+
   <div class="controls">
-    <button class="score-btn plus" id="p1plus" aria-label="Increase Player 1 score">+</button>
-    <button class="score-btn plus" id="p2plus" aria-label="Increase Player 2 score">+</button>
-    <button class="score-btn minus" id="p1minus" aria-label="Decrease Player 1 score">&minus;</button>
-    <button class="score-btn minus" id="p2minus" aria-label="Decrease Player 2 score">&minus;</button>
+    <button class="action-btn goal p1" id="p1goal" aria-label="Player 1 Goal">
+      <span class="btn-player">Player 1</span>
+      <span class="btn-action">GOAL</span>
+    </button>
+    <button class="action-btn goal p2" id="p2goal" aria-label="Player 2 Goal">
+      <span class="btn-player">Player 2</span>
+      <span class="btn-action">GOAL</span>
+    </button>
+    <button class="action-btn foul p1" id="p1foul" aria-label="Player 1 Foul">
+      <span class="btn-player">Player 1</span>
+      <span class="btn-action">FOUL</span>
+    </button>
+    <button class="action-btn foul p2" id="p2foul" aria-label="Player 2 Foul">
+      <span class="btn-player">Player 2</span>
+      <span class="btn-action">FOUL</span>
+    </button>
   </div>
 
   <div class="bottom-bar">
-    <button class="serve-btn" id="serveBtn">Player 1 &middot; 1st Serve</button>
+    <button class="undo-btn" id="undoBtn" disabled>Undo</button>
     <button class="reset-btn" id="resetBtn">Reset</button>
   </div>
 
@@ -230,21 +279,13 @@
   let score2 = 0;
   // serve state: 0 = P1 1st, 1 = P1 2nd, 2 = P2 1st, 3 = P2 2nd
   let serveState = 0;
+  let history = []; // { player, amount, prevServe }
 
   const score1El = document.getElementById('score1');
   const score2El = document.getElementById('score2');
-  const serveBtn = document.getElementById('serveBtn');
+  const serveStateEl = document.getElementById('serveState');
+  const undoBtn = document.getElementById('undoBtn');
   const announcer = document.getElementById('announcer');
-
-  function announce(message){
-    // Clear first so repeated identical messages are still announced
-    announcer.textContent = '';
-    setTimeout(() => { announcer.textContent = message; }, 50);
-  }
-
-  function announceScores(){
-    announce(score1 + '. ' + score2 + '.');
-  }
 
   const dots = {
     1: [document.getElementById('dot1a'), document.getElementById('dot1b')],
@@ -258,15 +299,24 @@
     'Player 2 \u00b7 2nd Serve'
   ];
 
+  function announce(message){
+    // Clear first so repeated identical messages are still announced
+    announcer.textContent = '';
+    setTimeout(() => { announcer.textContent = message; }, 50);
+  }
+
+  function announceScores(){
+    announce(score1 + '. ' + score2 + '.');
+  }
+
   function renderScores(){
     score1El.textContent = score1;
     score2El.textContent = score2;
   }
 
   function renderServe(){
-    serveBtn.textContent = serveLabels[serveState];
+    serveStateEl.textContent = serveLabels[serveState];
 
-    // which player is serving, and how many dots filled (1st serve = 1 dot, 2nd serve = 2 dots)
     const servingPlayer = serveState < 2 ? 1 : 2;
     const filledCount = (serveState % 2 === 0) ? 1 : 2;
 
@@ -279,28 +329,53 @@
     });
   }
 
-  document.getElementById('p1plus').addEventListener('click', () => { score1++; renderScores(); announceScores(); });
-  document.getElementById('p1minus').addEventListener('click', () => { score1 = Math.max(0, score1 - 1); renderScores(); announceScores(); });
-  document.getElementById('p2plus').addEventListener('click', () => { score2++; renderScores(); announceScores(); });
-  document.getElementById('p2minus').addEventListener('click', () => { score2 = Math.max(0, score2 - 1); renderScores(); announceScores(); });
+  function updateUndoState(){
+    undoBtn.disabled = history.length === 0;
+  }
 
-  serveBtn.addEventListener('click', () => {
+  function addPoints(player, amount){
+    const prevServe = serveState;
+    if(player === 1){ score1 += amount; } else { score2 += amount; }
+    history.push({ player, amount, prevServe });
     serveState = (serveState + 1) % 4;
+
+    renderScores();
     renderServe();
-    announce(serveLabels[serveState]);
+    announceScores();
+    updateUndoState();
+  }
+
+  document.getElementById('p1goal').addEventListener('click', () => addPoints(1, 2));
+  document.getElementById('p2goal').addEventListener('click', () => addPoints(2, 2));
+  document.getElementById('p1foul').addEventListener('click', () => addPoints(1, 1));
+  document.getElementById('p2foul').addEventListener('click', () => addPoints(2, 1));
+
+  undoBtn.addEventListener('click', () => {
+    if(history.length === 0) return;
+    const last = history.pop();
+    if(last.player === 1){ score1 -= last.amount; } else { score2 -= last.amount; }
+    serveState = last.prevServe;
+
+    renderScores();
+    renderServe();
+    announceScores();
+    updateUndoState();
   });
 
   document.getElementById('resetBtn').addEventListener('click', () => {
     score1 = 0;
     score2 = 0;
     serveState = 0;
+    history = [];
     renderScores();
     renderServe();
-    announce('Reset. ' + serveLabels[serveState] + '. Player 1: 0. Player 2: 0.');
+    updateUndoState();
+    announce('Reset. ' + serveLabels[serveState] + '. 0. 0.');
   });
 
   renderScores();
   renderServe();
+  updateUndoState();
 </script>
 
 </body>
