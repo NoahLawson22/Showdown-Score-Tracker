@@ -461,6 +461,25 @@
   p1NameInput.addEventListener('input', updatePlayerNames);
   p2NameInput.addEventListener('input', updatePlayerNames);
 
+  p1NameInput.addEventListener('focus', () => { p1NameInput.value = ''; });
+  p2NameInput.addEventListener('focus', () => { p2NameInput.value = ''; });
+
+  p1NameInput.addEventListener('blur', () => {
+    if(p1NameInput.value.trim() === ''){ p1NameInput.value = 'Player 1'; }
+    updatePlayerNames();
+  });
+  p2NameInput.addEventListener('blur', () => {
+    if(p2NameInput.value.trim() === ''){ p2NameInput.value = 'Player 2'; }
+    updatePlayerNames();
+  });
+
+  p1NameInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); p1NameInput.blur(); }
+  });
+  p2NameInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); p2NameInput.blur(); }
+  });
+
   document.getElementById('p1goal').addEventListener('click', () => addPoints(1, 2));
   document.getElementById('p2goal').addEventListener('click', () => addPoints(2, 2));
   document.getElementById('p1foul').addEventListener('click', () => addPoints(2, 1));
