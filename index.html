@@ -68,6 +68,18 @@
   .score-half.p1 .player-label{ color: var(--p1); }
   .score-half.p2 .player-label{ color: var(--p2); }
 
+  input.player-label{
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    outline: none;
+    width: 92%;
+    max-width: 260px;
+    padding: 2px 4px;
+    color: inherit;
+  }
+  input.player-label:focus{ border-bottom-color: var(--amber); }
+
   .score-num{
     font-family: 'Courier New', Consolas, monospace;
     font-weight: 900;
@@ -240,7 +252,7 @@
   <div class="scoreboard">
     <div class="center-divider"></div>
     <div class="score-half p1">
-      <div class="player-label">Player 1</div>
+      <input type="text" class="player-label" id="p1NameInput" value="Player 1" maxlength="24">
       <div class="score-num" id="score1">0</div>
       <div class="serve-dots" id="dots1">
         <div class="serve-dot" id="dot1a"></div>
@@ -248,7 +260,7 @@
       </div>
     </div>
     <div class="score-half p2">
-      <div class="player-label">Player 2</div>
+      <input type="text" class="player-label" id="p2NameInput" value="Player 2" maxlength="24">
       <div class="score-num" id="score2">0</div>
       <div class="serve-dots" id="dots2">
         <div class="serve-dot" id="dot2a"></div>
@@ -261,19 +273,19 @@
 
   <div class="controls">
     <button class="action-btn goal p1" id="p1goal" aria-label="Player 1 Goal">
-      <span class="btn-player">Player 1</span>
+      <span class="btn-player" id="p1goalLabel">Player 1</span>
       <span class="btn-action">GOAL</span>
     </button>
     <button class="action-btn goal p2" id="p2goal" aria-label="Player 2 Goal">
-      <span class="btn-player">Player 2</span>
+      <span class="btn-player" id="p2goalLabel">Player 2</span>
       <span class="btn-action">GOAL</span>
     </button>
     <button class="action-btn foul p1" id="p1foul" aria-label="Player 1 Foul">
-      <span class="btn-player">Player 1</span>
+      <span class="btn-player" id="p1foulLabel">Player 1</span>
       <span class="btn-action">FOUL</span>
     </button>
     <button class="action-btn foul p2" id="p2foul" aria-label="Player 2 Foul">
-      <span class="btn-player">Player 2</span>
+      <span class="btn-player" id="p2foulLabel">Player 2</span>
       <span class="btn-action">FOUL</span>
     </button>
   </div>
@@ -294,6 +306,8 @@
   let serveState = 0;
   let history = []; // { player, amount, prevServe }
   let winner = null; // null, 1, or 2
+  let player1Name = 'Player 1';
+  let player2Name = 'Player 2';
 
   const score1El = document.getElementById('score1');
   const score2El = document.getElementById('score2');
@@ -301,24 +315,31 @@
   const undoBtn = document.getElementById('undoBtn');
   const announcer = document.getElementById('announcer');
   const winSound = document.getElementById('winSound');
-  const actionButtons = [
-    document.getElementById('p1goal'),
-    document.getElementById('p2goal'),
-    document.getElementById('p1foul'),
-    document.getElementById('p2foul')
-  ];
+  const p1NameInput = document.getElementById('p1NameInput');
+  const p2NameInput = document.getElementById('p2NameInput');
+  const p1goalBtn = document.getElementById('p1goal');
+  const p2goalBtn = document.getElementById('p2goal');
+  const p1foulBtn = document.getElementById('p1foul');
+  const p2foulBtn = document.getElementById('p2foul');
+  const p1goalLabel = document.getElementById('p1goalLabel');
+  const p2goalLabel = document.getElementById('p2goalLabel');
+  const p1foulLabel = document.getElementById('p1foulLabel');
+  const p2foulLabel = document.getElementById('p2foulLabel');
+  const actionButtons = [p1goalBtn, p2goalBtn, p1foulBtn, p2foulBtn];
 
   const dots = {
     1: [document.getElementById('dot1a'), document.getElementById('dot1b')],
     2: [document.getElementById('dot2a'), document.getElementById('dot2b')]
   };
 
-  const serveLabels = [
-    'Player 1 \u00b7 1st Serve',
-    'Player 1 \u00b7 2nd Serve',
-    'Player 2 \u00b7 1st Serve',
-    'Player 2 \u00b7 2nd Serve'
-  ];
+  function getServeLabels(){
+    return [
+      player1Name + ' \u00b7 1st Serve',
+      player1Name + ' \u00b7 2nd Serve',
+      player2Name + ' \u00b7 1st Serve',
+      player2Name + ' \u00b7 2nd Serve'
+    ];
+  }
 
   function announce(message){
     // Clear first so repeated identical messages are still announced
@@ -327,7 +348,16 @@
   }
 
   function announceScores(){
-    announce(score1 + '. ' + score2 + '.');
+    const won = checkWin();
+    if(won === 1){
+      announce(score1 + '. ' + score2 + '.');
+    } else if(won === 2){
+      announce(score2 + '. ' + score1 + '.');
+    } else if(serveState === 2 || serveState === 3){
+      announce(score2 + '. ' + score1 + '.');
+    } else {
+      announce(score1 + '. ' + score2 + '.');
+    }
   }
 
   function renderScores(){
@@ -336,7 +366,7 @@
   }
 
   function renderServe(){
-    serveStateEl.textContent = serveLabels[serveState];
+    serveStateEl.textContent = getServeLabels()[serveState];
 
     const servingPlayer = serveState < 2 ? 1 : 2;
     const filledCount = (serveState % 2 === 0) ? 1 : 2;
@@ -366,7 +396,7 @@
 
   function showWinner(player){
     winner = player;
-    serveStateEl.textContent = 'Player ' + player + ' Wins!';
+    serveStateEl.textContent = (player === 1 ? player1Name : player2Name) + ' Wins!';
     serveStateEl.classList.add('win');
     setActionButtonsDisabled(true);
     winSound.currentTime = 0;
@@ -404,6 +434,33 @@
     applyWinCheck();
   }
 
+  function refreshNameDependentUI(){
+    p1goalLabel.textContent = player1Name;
+    p1foulLabel.textContent = player1Name;
+    p2goalLabel.textContent = player2Name;
+    p2foulLabel.textContent = player2Name;
+
+    p1goalBtn.setAttribute('aria-label', player1Name + ' Goal');
+    p1foulBtn.setAttribute('aria-label', player1Name + ' Foul');
+    p2goalBtn.setAttribute('aria-label', player2Name + ' Goal');
+    p2foulBtn.setAttribute('aria-label', player2Name + ' Foul');
+
+    if(winner !== null){
+      serveStateEl.textContent = (winner === 1 ? player1Name : player2Name) + ' Wins!';
+    } else {
+      renderServe();
+    }
+  }
+
+  function updatePlayerNames(){
+    player1Name = p1NameInput.value.trim() || 'Player 1';
+    player2Name = p2NameInput.value.trim() || 'Player 2';
+    refreshNameDependentUI();
+  }
+
+  p1NameInput.addEventListener('input', updatePlayerNames);
+  p2NameInput.addEventListener('input', updatePlayerNames);
+
   document.getElementById('p1goal').addEventListener('click', () => addPoints(1, 2));
   document.getElementById('p2goal').addEventListener('click', () => addPoints(2, 2));
   document.getElementById('p1foul').addEventListener('click', () => addPoints(2, 1));
@@ -433,7 +490,7 @@
     renderScores();
     renderServe();
     updateUndoState();
-    announce('Reset. ' + serveLabels[serveState] + '. 0. 0.');
+    announce('Reset. ' + getServeLabels()[serveState] + '. 0. 0.');
   });
 
   renderScores();
