@@ -118,17 +118,17 @@
   /* ---------- SERVE STATE BOX ---------- */
   .serve-state-bar{
     flex: 0 0 auto;
-    min-height: 50px;
+    min-height: 42px;
     display:flex;
     align-items:center;
     justify-content:center;
     background: #1b1c1f;
     color: var(--amber);
     font-weight: 700;
-    font-size: clamp(15px, 3.2vh, 26px);
+    font-size: clamp(13px, 2.6vh, 22px);
     letter-spacing: 0.04em;
     text-align:center;
-    padding: 6px 10px;
+    padding: 5px 10px;
     border-top: 2px solid var(--divider);
     border-bottom: 2px solid var(--divider);
   }
@@ -142,12 +142,14 @@
   .controls{
     flex: 1.4 1 0;
     display:grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1.5fr 1.5fr 1fr;
     gap: 3px;
     background: var(--divider);
     min-height:0;
   }
+
+  .action-btn.wide{ grid-column: span 2; }
 
   button{
     border:none;
@@ -195,6 +197,14 @@
   .action-btn.foul .btn-action{ color: var(--foul); }
   .action-btn.warn .btn-action{ color: var(--warn); }
   .action-btn.warn.triggered .btn-action{ color: var(--penalty); }
+  .action-btn.timeout .btn-action{ color: var(--amber); }
+
+  .action-btn.compact .btn-player{
+    font-size: clamp(8px, 1.6vh, 13px);
+  }
+  .action-btn.compact .btn-action{
+    font-size: clamp(11px, 2.6vh, 20px);
+  }
 
   /* ---------- BOTTOM BAR ---------- */
   .bottom-bar{
@@ -234,7 +244,7 @@
   }
 
   @media (orientation: landscape) and (max-height: 500px){
-    .serve-state-bar{ min-height: 36px; }
+    .serve-state-bar{ min-height: 30px; }
     .bottom-bar{ min-height: 46px; }
   }
 
@@ -276,27 +286,35 @@
   <div class="serve-state-bar" id="serveState" role="status" aria-live="polite">Player 1 &middot; 1st Serve</div>
 
   <div class="controls">
-    <button class="action-btn goal p1" id="p1goal" aria-label="Player 1 Goal">
+    <button class="action-btn goal p1 wide" id="p1goal" aria-label="Player 1 Goal">
       <span class="btn-player" id="p1goalLabel">Player 1</span>
       <span class="btn-action">GOAL</span>
     </button>
-    <button class="action-btn goal p2" id="p2goal" aria-label="Player 2 Goal">
+    <button class="action-btn goal p2 wide" id="p2goal" aria-label="Player 2 Goal">
       <span class="btn-player" id="p2goalLabel">Player 2</span>
       <span class="btn-action">GOAL</span>
     </button>
-    <button class="action-btn foul p1" id="p1foul" aria-label="Player 1 Foul">
+    <button class="action-btn foul p1 wide" id="p1foul" aria-label="Player 1 Foul">
       <span class="btn-player" id="p1foulLabel">Player 1</span>
       <span class="btn-action">FOUL</span>
     </button>
-    <button class="action-btn foul p2" id="p2foul" aria-label="Player 2 Foul">
+    <button class="action-btn foul p2 wide" id="p2foul" aria-label="Player 2 Foul">
       <span class="btn-player" id="p2foulLabel">Player 2</span>
       <span class="btn-action">FOUL</span>
     </button>
-    <button class="action-btn warn p1" id="p1warn" aria-label="Player 1 Warning">
+    <button class="action-btn warn p1 compact" id="p1warn" aria-label="Player 1 Warning">
       <span class="btn-player" id="p1warnLabel">Player 1</span>
       <span class="btn-action" id="p1warnAction">WARNING</span>
     </button>
-    <button class="action-btn warn p2" id="p2warn" aria-label="Player 2 Warning">
+    <button class="action-btn timeout p1 compact" id="p1timeout" aria-label="Player 1 Time Out">
+      <span class="btn-player" id="p1timeoutLabel">Player 1</span>
+      <span class="btn-action">TIME OUT</span>
+    </button>
+    <button class="action-btn timeout p2 compact" id="p2timeout" aria-label="Player 2 Time Out">
+      <span class="btn-player" id="p2timeoutLabel">Player 2</span>
+      <span class="btn-action">TIME OUT</span>
+    </button>
+    <button class="action-btn warn p2 compact" id="p2warn" aria-label="Player 2 Warning">
       <span class="btn-player" id="p2warnLabel">Player 2</span>
       <span class="btn-action" id="p2warnAction">WARNING</span>
     </button>
@@ -322,6 +340,10 @@
   let player2Name = 'Player 2';
   let p1WarningIssued = false;
   let p2WarningIssued = false;
+  let p1TimeoutUsed = false;
+  let p2TimeoutUsed = false;
+  let timeoutActive = false;
+  let timeoutIntervalId = null;
 
   const score1El = document.getElementById('score1');
   const score2El = document.getElementById('score2');
@@ -337,6 +359,8 @@
   const p2foulBtn = document.getElementById('p2foul');
   const p1warnBtn = document.getElementById('p1warn');
   const p2warnBtn = document.getElementById('p2warn');
+  const p1timeoutBtn = document.getElementById('p1timeout');
+  const p2timeoutBtn = document.getElementById('p2timeout');
   const p1goalLabel = document.getElementById('p1goalLabel');
   const p2goalLabel = document.getElementById('p2goalLabel');
   const p1foulLabel = document.getElementById('p1foulLabel');
@@ -345,6 +369,8 @@
   const p2warnLabel = document.getElementById('p2warnLabel');
   const p1warnAction = document.getElementById('p1warnAction');
   const p2warnAction = document.getElementById('p2warnAction');
+  const p1timeoutLabel = document.getElementById('p1timeoutLabel');
+  const p2timeoutLabel = document.getElementById('p2timeoutLabel');
   const actionButtons = [p1goalBtn, p2goalBtn, p1foulBtn, p2foulBtn, p1warnBtn, p2warnBtn];
 
   const dots = {
@@ -386,7 +412,9 @@
   }
 
   function renderServe(){
-    serveStateEl.textContent = getServeLabels()[serveState];
+    if(!timeoutActive){
+      serveStateEl.textContent = getServeLabels()[serveState];
+    }
 
     const servingPlayer = serveState < 2 ? 1 : 2;
     const filledCount = (serveState % 2 === 0) ? 1 : 2;
@@ -414,11 +442,18 @@
     actionButtons.forEach(btn => { btn.disabled = disabled; });
   }
 
+  function refreshButtonStates(){
+    const blocked = winner !== null || timeoutActive;
+    setActionButtonsDisabled(blocked);
+    p1timeoutBtn.disabled = blocked || p1TimeoutUsed;
+    p2timeoutBtn.disabled = blocked || p2TimeoutUsed;
+  }
+
   function showWinner(player){
     winner = player;
     serveStateEl.textContent = (player === 1 ? player1Name : player2Name) + ' Wins!';
     serveStateEl.classList.add('win');
-    setActionButtonsDisabled(true);
+    refreshButtonStates();
     winSound.currentTime = 0;
     winSound.play().catch(() => {});
   }
@@ -426,7 +461,7 @@
   function clearWinner(){
     winner = null;
     serveStateEl.classList.remove('win');
-    setActionButtonsDisabled(false);
+    refreshButtonStates();
     renderServe();
   }
 
@@ -504,6 +539,11 @@
     updateWarnButtonUI(1);
     updateWarnButtonUI(2);
 
+    p1timeoutLabel.textContent = player1Name;
+    p2timeoutLabel.textContent = player2Name;
+    p1timeoutBtn.setAttribute('aria-label', player1Name + ' Time Out');
+    p2timeoutBtn.setAttribute('aria-label', player2Name + ' Time Out');
+
     if(winner !== null){
       serveStateEl.textContent = (winner === 1 ? player1Name : player2Name) + ' Wins!';
     } else {
@@ -547,6 +587,61 @@
   p1warnBtn.addEventListener('click', () => handleWarning(1));
   p2warnBtn.addEventListener('click', () => handleWarning(2));
 
+  function startTimeout(player){
+    if(winner !== null || timeoutActive) return;
+    const used = player === 1 ? p1TimeoutUsed : p2TimeoutUsed;
+    if(used) return;
+
+    if(player === 1){ p1TimeoutUsed = true; } else { p2TimeoutUsed = true; }
+    timeoutActive = true;
+    history.push({ type: 'timeout', player });
+    updateUndoState();
+    refreshButtonStates();
+
+    const name = player === 1 ? player1Name : player2Name;
+
+    // Suppress auto-announcement of every tick; explicit announce() calls still work via the hidden live region
+    serveStateEl.setAttribute('aria-live', 'off');
+    serveStateEl.classList.remove('win');
+
+    let remaining = 60;
+    serveStateEl.textContent = name + ' Time Out: ' + remaining;
+
+    timeoutIntervalId = setInterval(() => {
+      remaining--;
+
+      if(remaining === 15){
+        serveStateEl.textContent = '15 seconds remaining';
+        announce('15 seconds remaining');
+      } else if(remaining > 15){
+        serveStateEl.textContent = name + ' Time Out: ' + remaining;
+      } else if(remaining > 0){
+        serveStateEl.textContent = remaining + ' seconds remaining';
+      }
+
+      if(remaining <= 0){
+        clearInterval(timeoutIntervalId);
+        timeoutIntervalId = null;
+        timeoutActive = false;
+
+        serveStateEl.setAttribute('aria-live', 'polite');
+
+        if(winner !== null){
+          serveStateEl.textContent = (winner === 1 ? player1Name : player2Name) + ' Wins!';
+          serveStateEl.classList.add('win');
+        } else {
+          renderServe();
+        }
+
+        announce('Time out over');
+        refreshButtonStates();
+      }
+    }, 1000);
+  }
+
+  p1timeoutBtn.addEventListener('click', () => startTimeout(1));
+  p2timeoutBtn.addEventListener('click', () => startTimeout(2));
+
   undoBtn.addEventListener('click', () => {
     if(history.length === 0) return;
     const last = history.pop();
@@ -574,10 +669,36 @@
       announceScores();
       updateUndoState();
       applyWinCheck();
+
+    } else if(last.type === 'timeout'){
+      if(timeoutActive && timeoutIntervalId !== null){
+        clearInterval(timeoutIntervalId);
+        timeoutIntervalId = null;
+        timeoutActive = false;
+        serveStateEl.setAttribute('aria-live', 'polite');
+      }
+
+      if(last.player === 1){ p1TimeoutUsed = false; } else { p2TimeoutUsed = false; }
+
+      if(winner !== null){
+        serveStateEl.textContent = (winner === 1 ? player1Name : player2Name) + ' Wins!';
+        serveStateEl.classList.add('win');
+      } else {
+        renderServe();
+      }
+
+      refreshButtonStates();
+      updateUndoState();
     }
   });
 
   document.getElementById('resetBtn').addEventListener('click', () => {
+    if(timeoutIntervalId){ clearInterval(timeoutIntervalId); timeoutIntervalId = null; }
+    timeoutActive = false;
+    p1TimeoutUsed = false;
+    p2TimeoutUsed = false;
+    serveStateEl.setAttribute('aria-live', 'polite');
+
     score1 = 0;
     score2 = 0;
     serveState = 0;
@@ -586,7 +707,7 @@
     p1WarningIssued = false;
     p2WarningIssued = false;
     serveStateEl.classList.remove('win');
-    setActionButtonsDisabled(false);
+    refreshButtonStates();
     renderScores();
     renderServe();
     updateUndoState();
@@ -600,6 +721,7 @@
   updateUndoState();
   updateWarnButtonUI(1);
   updateWarnButtonUI(2);
+  refreshButtonStates();
 </script>
 
 </body>
