@@ -140,10 +140,10 @@
 
   /* ---------- CONTROL BUTTONS ---------- */
   .controls{
-    flex: 1.4 1 0;
+    flex: 2.2 1 0;
     display:grid;
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: 1.5fr 1.5fr 1fr;
+    grid-template-rows: 2fr 2fr 1fr;
     gap: 3px;
     background: var(--divider);
     min-height:0;
@@ -208,18 +208,18 @@
 
   /* ---------- BOTTOM BAR ---------- */
   .bottom-bar{
-    flex: 0 0 auto;
+    flex: 0 0 32px;
+    height: 32px;
     display:grid;
     grid-template-columns: 1fr 1fr;
     gap: 3px;
     background: var(--divider);
-    min-height: 64px;
   }
 
   .undo-btn{
     background: #1b1c1f;
     color: var(--amber);
-    font-size: clamp(16px, 3.4vh, 28px);
+    font-size: clamp(11px, 2.2vh, 16px);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -233,7 +233,7 @@
   .reset-btn{
     background: #3a1414;
     color: #FF8A80;
-    font-size: clamp(16px, 3.4vh, 28px);
+    font-size: clamp(11px, 2.2vh, 16px);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -245,7 +245,6 @@
 
   @media (orientation: landscape) and (max-height: 500px){
     .serve-state-bar{ min-height: 30px; }
-    .bottom-bar{ min-height: 46px; }
   }
 
   .sr-only{
@@ -484,9 +483,17 @@
 
     renderScores();
     renderServe();
-    announceScores();
+
+    const wonNow = checkWin();
+
     updateUndoState();
     applyWinCheck();
+
+    if(wonNow){
+      setTimeout(() => { announceScores(); }, 500);
+    } else {
+      announceScores();
+    }
   }
 
   function updateWarnButtonUI(player){
@@ -519,10 +526,17 @@
     history.push({ type: 'penalty', player });
     if(player === 1){ score2 += 2; } else { score1 += 2; }
 
+    const wonNow = checkWin();
+
     renderScores();
-    announceScores();
     updateUndoState();
     applyWinCheck();
+
+    if(wonNow){
+      setTimeout(() => { announceScores(); }, 500);
+    } else {
+      announceScores();
+    }
   }
 
   function refreshNameDependentUI(){
@@ -610,31 +624,37 @@
     timeoutIntervalId = setInterval(() => {
       remaining--;
 
-      if(remaining === 15){
-        serveStateEl.textContent = '15 seconds remaining';
-        announce('15 seconds remaining');
-      } else if(remaining > 15){
+      if(remaining > 15){
         serveStateEl.textContent = name + ' Time Out: ' + remaining;
       } else if(remaining > 0){
-        serveStateEl.textContent = remaining + ' seconds remaining';
+        const text = remaining + ' seconds';
+        serveStateEl.textContent = text;
+        if(remaining === 15){ announce(text); }
       }
 
       if(remaining <= 0){
         clearInterval(timeoutIntervalId);
         timeoutIntervalId = null;
         timeoutActive = false;
-
-        serveStateEl.setAttribute('aria-live', 'polite');
-
-        if(winner !== null){
-          serveStateEl.textContent = (winner === 1 ? player1Name : player2Name) + ' Wins!';
-          serveStateEl.classList.add('win');
-        } else {
-          renderServe();
-        }
+        refreshButtonStates();
 
         announce('Time out over');
-        refreshButtonStates();
+
+        setTimeout(() => {
+          let currentText;
+          if(winner !== null){
+            currentText = (winner === 1 ? player1Name : player2Name) + ' Wins!';
+            serveStateEl.textContent = currentText;
+            serveStateEl.classList.add('win');
+          } else {
+            renderServe();
+            currentText = getServeLabels()[serveState];
+          }
+          serveStateEl.setAttribute('aria-live', 'polite');
+          announce(currentText);
+
+          setTimeout(() => { announceScores(); }, 500);
+        }, 500);
       }
     }, 1000);
   }
